@@ -16,20 +16,31 @@ python main.py
 
 ## Build .exe (Windows)
 
+### Méthode automatique 
+```powershell
+.\scripts\build.ps1
+```
+
+Le script build automatique :
+- Vérifie et installe PyInstaller si nécessaire
+- Nettoie les anciens builds
+- Crée l'exécutable avec toutes les options
+- L'exécutable sera dans `dist/Enduraw_Testing_Tool.exe`
+
+### Méthode manuelle
 ```bash
 # Installer PyInstaller
 pip install pyinstaller
 
 # Build l'application
-pyinstaller --onefile --windowed --name "Enduraw_Testing_Tool" --add-data "src;src" main.py
-
-# L'exécutable sera dans le dossier dist/
+pyinstaller --onefile --windowed --name "Enduraw_Testing_Tool" --add-data "src;src" --icon=icon.ico main.py
 ```
 
-### Options PyInstaller :
+Options PyInstaller :
 - `--onefile` : Crée un seul fichier .exe
 - `--windowed` : Pas de console (app GUI)
-- `--icon=icon.ico` : Ajouter une icône (optionnel)
+- `--icon=icon.ico` : Ajoute une icône personnalisée
+- `--add-data "src;src"` : Inclut le dossier src dans l'exe
 
 ## Structure du projet
 
