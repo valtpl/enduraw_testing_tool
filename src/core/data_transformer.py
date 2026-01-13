@@ -4,7 +4,7 @@ Data Transformer - Combines XML data with manual input to create MongoDB-ready o
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
-from models import (
+from core.models import (
     TestResult, Seuil, VO2Max, VMA, PatientInfo,
     GraphCurve, Graph, ZoneSeuil, LactateMeasure
 )

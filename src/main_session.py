@@ -9,11 +9,11 @@ from tkinter import filedialog, messagebox
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
-from xml_parser import TCPXmlParser
-from data_transformer import DataTransformer
-from json_exporter import JsonExporter
-from session_manager import SessionManager
-from app_tabs import SessionListItem, ProfileListItem, XmlListItem, MatchListItem
+from utils.xml_parser import TCPXmlParser
+from core.data_transformer import DataTransformer
+from utils.json_exporter import JsonExporter
+from core.session_manager import SessionManager
+from ui.app_tabs import SessionListItem, ProfileListItem, XmlListItem, MatchListItem
 from config import APP_NAME, APP_VERSION
 
 # Import InputForm from original main.py
