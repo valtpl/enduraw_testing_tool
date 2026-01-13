@@ -118,12 +118,37 @@ class InputForm(ctk.CTkScrollableFrame):
         
         row = 0
         
-        # ==================== LEFT COLUMN (col=0) ====================
+        # ==================== LEFT COLUMN - PROFIL ATHLÈTE ====================
         left_frame = ctk.CTkFrame(self, fg_color="transparent")
         left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
         left_frame.grid_columnconfigure(1, weight=1)
         
         left_row = 0
+        
+        # ----- CONSENTEMENT -----
+        left_row = self._add_section_to_frame(left_frame, "✅ Consentement", left_row)
+        left_row = self._add_consent_checkbox_to_frame(
+            left_frame, 
+            "consent_risques", 
+            "Je reconnais avoir été informé(e) des risques inhérents à la réalisation d'un test d'effort maximal. "
+            "J'accepte de participer en toute connaissance de cause et décharge Enduraw de toute responsabilité "
+            "en cas d'incident lié à mon état de santé non signalé préalablement.",
+            left_row
+        )
+        left_row = self._add_consent_checkbox_to_frame(
+            left_frame,
+            "consent_donnees",
+            "Je consens à la collecte et à la sauvegarde de mes données personnelles et de mes résultats de test "
+            "par Enduraw, conformément au RGPD.",
+            left_row
+        )
+        left_row = self._add_consent_checkbox_to_frame(
+            left_frame,
+            "consent_anonyme",
+            "Je consens à l'utilisation future de mes données de test, de manière anonymisée, "
+            "à des fins statistiques, de recherche ou d'amélioration des services Enduraw.",
+            left_row
+        )
         
         # ----- IDENTIFICATION -----
         left_row = self._add_section_to_frame(left_frame, "🪪 Identification", left_row)
@@ -136,12 +161,17 @@ class InputForm(ctk.CTkScrollableFrame):
         left_row = self._add_field_to_frame(left_frame, "specialty", "Spécialité", left_row)
         left_row = self._add_checkbox_to_frame(left_frame, "has_coach", "A un coach", left_row)
         
-        # ----- COMPOSITION CORPORELLE -----
-        left_row = self._add_section_to_frame(left_frame, "⚖️ Composition Corporelle", left_row)
+        # ----- DONNÉES CORPORELLES & PHYSIOLOGIQUES -----
+        left_row = self._add_section_to_frame(left_frame, "⚖️ Données Corporelles & Physiologiques", left_row)
         left_row = self._add_field_to_frame(left_frame, "height_cm", "Taille (cm)", left_row, field_type="number")
         left_row = self._add_field_to_frame(left_frame, "current_weight", "Poids actuel (kg)", left_row, field_type="number")
         left_row = self._add_field_to_frame(left_frame, "weight_before_test", "Poids avant test (kg)", left_row, field_type="number")
         left_row = self._add_field_to_frame(left_frame, "weight_after_test", "Poids après test (kg)", left_row, field_type="number")
+        left_row = self._add_field_to_frame(left_frame, "altitude_vie", "Altitude de vie (m)", left_row, field_type="number")
+        left_row = self._add_subsection_to_frame(left_frame, "SpO2 (%)", left_row)
+        left_row = self._add_field_to_frame(left_frame, "spo2_avant", "Avant test", left_row, field_type="number")
+        left_row = self._add_field_to_frame(left_frame, "spo2_apres", "Après test", left_row, field_type="number")
+        left_row = self._add_field_to_frame(left_frame, "lactatemie_repos", "Lactatémie repos (mmol/L)", left_row, field_type="number")
         
         # ----- VIE PROFESSIONNELLE -----
         left_row = self._add_section_to_frame(left_frame, "💼 Vie Professionnelle", left_row)
@@ -155,35 +185,33 @@ class InputForm(ctk.CTkScrollableFrame):
         left_row = self._add_field_to_frame(left_frame, "min_hr_before", "FC repos (bpm)", left_row, field_type="number")
         left_row = self._add_field_to_frame(left_frame, "max_hr_ever", "FC max connue", left_row, field_type="number")
         left_row = self._add_field_to_frame(left_frame, "average_weekly_volume", "Volume hebdo", left_row)
-        
-        # Prédictions montre (format HH:MM:SS)
         left_row = self._add_subsection_to_frame(left_frame, "Prédictions montre (HH:MM:SS)", left_row)
         left_row = self._add_time_field_to_frame(left_frame, "prediction_5k", "5K", left_row)
         left_row = self._add_time_field_to_frame(left_frame, "prediction_10k", "10K", left_row)
         left_row = self._add_time_field_to_frame(left_frame, "prediction_half", "Semi", left_row)
         left_row = self._add_time_field_to_frame(left_frame, "prediction_marathon", "Marathon", left_row)
         
-        # ==================== RIGHT COLUMN (col=1) ====================
+        # ----- HISTORIQUE & OBJECTIFS -----
+        left_row = self._add_section_to_frame(left_frame, "🎯 Historique & Objectifs", left_row)
+        left_row = self._add_subsection_to_frame(left_frame, "Records personnels (HH:MM:SS)", left_row)
+        left_row = self._add_time_field_to_frame(left_frame, "record_5k", "5K", left_row)
+        left_row = self._add_time_field_to_frame(left_frame, "record_10k", "10K", left_row)
+        left_row = self._add_time_field_to_frame(left_frame, "record_half", "Semi", left_row)
+        left_row = self._add_time_field_to_frame(left_frame, "record_marathon", "Marathon", left_row)
+        left_row = self._add_field_to_frame(left_frame, "utmb_index", "Index UTMB", left_row, field_type="number")
+        left_row = self._add_textfield_to_frame(left_frame, "upcoming_goals", "Objectifs à venir", left_row)
+        
+        # ==================== RIGHT COLUMN - TEST & RÉSULTATS ====================
         right_frame = ctk.CTkFrame(self, fg_color="transparent")
         right_frame.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
         right_frame.grid_columnconfigure(1, weight=1)
         
         right_row = 0
         
-        # ----- HISTORIQUE & OBJECTIFS -----
-        right_row = self._add_section_to_frame(right_frame, "🎯 Historique & Objectifs", right_row)
-        right_row = self._add_subsection_to_frame(right_frame, "Records personnels (HH:MM:SS)", right_row)
-        right_row = self._add_time_field_to_frame(right_frame, "record_5k", "5K", right_row)
-        right_row = self._add_time_field_to_frame(right_frame, "record_10k", "10K", right_row)
-        right_row = self._add_time_field_to_frame(right_frame, "record_half", "Semi", right_row)
-        right_row = self._add_time_field_to_frame(right_frame, "record_marathon", "Marathon", right_row)
-        right_row = self._add_field_to_frame(right_frame, "utmb_index", "Index UTMB", right_row, field_type="number")
-        right_row = self._add_field_to_frame(right_frame, "upcoming_goals", "Objectifs à venir", right_row)
-        
         # ----- CONTEXTE SÉANCE -----
         right_row = self._add_section_to_frame(right_frame, "📋 Contexte Séance", right_row)
         right_row = self._add_field_to_frame(right_frame, "seance_veille", "Séance de la veille", right_row)
-        right_row = self._add_field_to_frame(right_frame, "observations", "Observations", right_row)
+        right_row = self._add_textfield_to_frame(right_frame, "observations", "Observations", right_row)
         
         # ----- PROTOCOLE -----
         right_row = self._add_section_to_frame(right_frame, "📊 Protocole", right_row)
@@ -191,10 +219,15 @@ class InputForm(ctk.CTkScrollableFrame):
         right_row = self._add_field_to_frame(right_frame, "first_stage_speed", "Vitesse 1er palier (km/h)", right_row, field_type="number")
         right_row = self._add_field_to_frame(right_frame, "last_stage_speed", "Vitesse dernier palier (km/h)", right_row, field_type="number")
         
-        # ----- RÉSULTATS GÉNÉRAUX -----
-        right_row = self._add_section_to_frame(right_frame, "📈 Résultats Généraux", right_row)
-        right_row = self._add_field_to_frame(right_frame, "measured_vo2max", "VO2max mesuré", right_row, field_type="number")
-        right_row = self._add_field_to_frame(right_frame, "max_hr", "FC max atteinte", right_row, field_type="number")
+        # ----- RÉSULTATS DU TEST -----
+        right_row = self._add_section_to_frame(right_frame, "📈 Résultats du Test", right_row)
+        right_row = self._add_field_to_frame(right_frame, "measured_vo2max", "VO2max mesuré (ml/min/kg)", right_row, field_type="number")
+        right_row = self._add_field_to_frame(right_frame, "max_hr", "FC max atteinte (bpm)", right_row, field_type="number")
+        right_row = self._add_field_to_frame(right_frame, "vma", "VMA (km/h)", right_row, field_type="number")
+        right_row = self._add_subsection_to_frame(right_frame, "RSI", right_row)
+        right_row = self._add_rsi_to_frame(right_frame, right_row)
+        right_row = self._add_subsection_to_frame(right_frame, "CMJ", right_row)
+        right_row = self._add_cmj_to_frame(right_frame, right_row)
         
         # ----- SEUILS -----
         right_row = self._add_section_to_frame(right_frame, "🎚️ Seuils Ventilatoires", right_row)
@@ -205,8 +238,12 @@ class InputForm(ctk.CTkScrollableFrame):
         right_row = self._add_lactate_to_frame(right_frame, right_row)
         
         # ----- CONSEILS -----
-        right_row = self._add_section_to_frame(right_frame, "� Conseils", right_row)
+        right_row = self._add_section_to_frame(right_frame, "💡 Conseils", right_row)
         right_row = self._add_textfield_to_frame(right_frame, "conseils_entrainements", "Conseils d'entraînement", right_row)
+        
+        # ----- NOTES PRIVÉES -----
+        right_row = self._add_section_to_frame(right_frame, "🔒 Notes Privées", right_row)
+        right_row = self._add_textfield_to_frame(right_frame, "notes_privees", "Notes internes (non visibles en front)", right_row)
     
     def _add_section_to_frame(self, frame, title: str, row: int) -> int:
         """Add section header to a specific frame"""
@@ -270,6 +307,27 @@ class InputForm(ctk.CTkScrollableFrame):
         self.entries[key] = {'widget': checkbox, 'type': 'checkbox'}
         return row + 1
     
+    def _add_consent_checkbox_to_frame(self, frame, key: str, label: str, row: int) -> int:
+        """Add consent checkbox with wrapped text"""
+        consent_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        consent_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=5)
+        consent_frame.grid_columnconfigure(1, weight=1)
+        
+        checkbox = ctk.CTkCheckBox(consent_frame, text="", width=20)
+        checkbox.grid(row=0, column=0, padx=(0, 10), sticky="nw")
+        
+        label_widget = ctk.CTkLabel(
+            consent_frame, 
+            text=label, 
+            wraplength=350,
+            justify="left",
+            anchor="w"
+        )
+        label_widget.grid(row=0, column=1, sticky="w")
+        
+        self.entries[key] = {'widget': checkbox, 'type': 'checkbox'}
+        return row + 1
+    
     def _add_textfield_to_frame(self, frame, key: str, label: str, row: int) -> int:
         """Add multi-line text field"""
         lbl = ctk.CTkLabel(frame, text=label, anchor="w")
@@ -317,6 +375,66 @@ class InputForm(ctk.CTkScrollableFrame):
         self.lactate_entries = []
         add_btn = ctk.CTkButton(self.lactate_frame, text="+ Ajouter mesure", width=130, command=self._add_lactate_entry)
         add_btn.grid(row=0, column=0, pady=3, sticky="w")
+        return row + 1
+    
+    def _add_cmj_to_frame(self, frame, row: int) -> int:
+        """Add CMJ section with Avant/Après side by side"""
+        cmj_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        cmj_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=5)
+        cmj_frame.grid_columnconfigure(0, weight=1)
+        cmj_frame.grid_columnconfigure(1, weight=1)
+        
+        # CMJ Avant
+        avant_frame = ctk.CTkFrame(cmj_frame, corner_radius=8)
+        avant_frame.grid(row=0, column=0, padx=(0, 5), sticky="nsew")
+        ctk.CTkLabel(avant_frame, text="🟢 Avant Test", font=ctk.CTkFont(weight="bold")).grid(row=0, column=0, columnspan=2, pady=5)
+        for i, (key, lbl) in enumerate([("cmj_avant_hauteur", "Hauteur (cm)"), ("cmj_avant_force", "Force max (kgf/kg)"), ("cmj_avant_puissance", "Puissance max (W/kg)")]):
+            ctk.CTkLabel(avant_frame, text=lbl).grid(row=i+1, column=0, padx=5, pady=2, sticky="w")
+            entry = ctk.CTkEntry(avant_frame, width=70)
+            entry.grid(row=i+1, column=1, padx=5, pady=2)
+            self.entries[key] = {'widget': entry, 'type': 'number'}
+        ctk.CTkLabel(avant_frame, text="").grid(row=4, pady=3)
+        
+        # CMJ Après
+        apres_frame = ctk.CTkFrame(cmj_frame, corner_radius=8)
+        apres_frame.grid(row=0, column=1, padx=(5, 0), sticky="nsew")
+        ctk.CTkLabel(apres_frame, text="🔴 Après Test", font=ctk.CTkFont(weight="bold")).grid(row=0, column=0, columnspan=2, pady=5)
+        for i, (key, lbl) in enumerate([("cmj_apres_hauteur", "Hauteur (cm)"), ("cmj_apres_force", "Force max (kgf/kg)"), ("cmj_apres_puissance", "Puissance max (W/kg)")]):
+            ctk.CTkLabel(apres_frame, text=lbl).grid(row=i+1, column=0, padx=5, pady=2, sticky="w")
+            entry = ctk.CTkEntry(apres_frame, width=70)
+            entry.grid(row=i+1, column=1, padx=5, pady=2)
+            self.entries[key] = {'widget': entry, 'type': 'number'}
+        ctk.CTkLabel(apres_frame, text="").grid(row=4, pady=3)
+        
+        return row + 1
+    
+    def _add_rsi_to_frame(self, frame, row: int) -> int:
+        """Add RSI section with Avant/Après side by side"""
+        rsi_frame = ctk.CTkFrame(frame, fg_color="transparent")
+        rsi_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=5)
+        rsi_frame.grid_columnconfigure(0, weight=1)
+        rsi_frame.grid_columnconfigure(1, weight=1)
+        
+        # RSI Avant
+        avant_frame = ctk.CTkFrame(rsi_frame, corner_radius=8)
+        avant_frame.grid(row=0, column=0, padx=(0, 5), sticky="nsew")
+        ctk.CTkLabel(avant_frame, text="🟢 Avant", font=ctk.CTkFont(weight="bold")).grid(row=0, column=0, columnspan=2, pady=5)
+        ctk.CTkLabel(avant_frame, text="RSI").grid(row=1, column=0, padx=5, pady=2, sticky="w")
+        entry_avant = ctk.CTkEntry(avant_frame, width=70)
+        entry_avant.grid(row=1, column=1, padx=5, pady=2)
+        self.entries["rsi_avant"] = {'widget': entry_avant, 'type': 'number'}
+        ctk.CTkLabel(avant_frame, text="").grid(row=2, pady=3)
+        
+        # RSI Après
+        apres_frame = ctk.CTkFrame(rsi_frame, corner_radius=8)
+        apres_frame.grid(row=0, column=1, padx=(5, 0), sticky="nsew")
+        ctk.CTkLabel(apres_frame, text="🔴 Après", font=ctk.CTkFont(weight="bold")).grid(row=0, column=0, columnspan=2, pady=5)
+        ctk.CTkLabel(apres_frame, text="RSI").grid(row=1, column=0, padx=5, pady=2, sticky="w")
+        entry_apres = ctk.CTkEntry(apres_frame, width=70)
+        entry_apres.grid(row=1, column=1, padx=5, pady=2)
+        self.entries["rsi_apres"] = {'widget': entry_apres, 'type': 'number'}
+        ctk.CTkLabel(apres_frame, text="").grid(row=2, pady=3)
+        
         return row + 1
     
     def _add_thresholds_section(self, row: int) -> int:
@@ -570,6 +688,11 @@ class InputForm(ctk.CTkScrollableFrame):
         
         return {
             'email': flat_data.get('email', ''),
+            'consentements': {
+                'risques': flat_data.get('consent_risques', False),
+                'donnees': flat_data.get('consent_donnees', False),
+                'anonyme': flat_data.get('consent_anonyme', False)
+            },
             'identity': {
                 'last_name': flat_data.get('last_name', ''),
                 'first_name': flat_data.get('first_name', ''),
@@ -630,11 +753,47 @@ class InputForm(ctk.CTkScrollableFrame):
                 },
                 'measured_vo2max': flat_data.get('measured_vo2max'),
                 'max_hr': flat_data.get('max_hr'),
+                'vma': flat_data.get('vma'),
                 'first_stage_speed': flat_data.get('first_stage_speed'),
                 'last_stage_speed': flat_data.get('last_stage_speed'),
                 'lactate_profile': lactate_data
             },
-            'conseils_entrainements': flat_data.get('conseils_entrainements', '')
+            'conseils_entrainements': flat_data.get('conseils_entrainements', ''),
+            
+            # RSI
+            'rsi': {
+                'avant': flat_data.get('rsi_avant'),
+                'apres': flat_data.get('rsi_apres')
+            },
+            
+            # CMJ
+            'cmj': {
+                'avant': {
+                    'hauteur_cm': flat_data.get('cmj_avant_hauteur'),
+                    'force_max_kfg_kg': flat_data.get('cmj_avant_force'),
+                    'puissance_max_w_kg': flat_data.get('cmj_avant_puissance')
+                },
+                'apres': {
+                    'hauteur_cm': flat_data.get('cmj_apres_hauteur'),
+                    'force_max_kfg_kg': flat_data.get('cmj_apres_force'),
+                    'puissance_max_w_kg': flat_data.get('cmj_apres_puissance')
+                }
+            },
+            
+            # Notes privées
+            'notes_privees': flat_data.get('notes_privees', ''),
+            
+            # Altitude de vie
+            'altitude_vie_m': flat_data.get('altitude_vie'),
+            
+            # SpO2
+            'spo2': {
+                'avant': flat_data.get('spo2_avant'),
+                'apres': flat_data.get('spo2_apres')
+            },
+            
+            # Lactatémie au repos
+            'lactatemie_repos': flat_data.get('lactatemie_repos')
         }
     
     def set_data(self, data: Dict[str, Any]):
@@ -642,6 +801,12 @@ class InputForm(ctk.CTkScrollableFrame):
         # Flatten nested structure
         flat = {}
         flat['email'] = data.get('email', '')
+        
+        # Consentements
+        consentements = data.get('consentements', {})
+        flat['consent_risques'] = consentements.get('risques', False)
+        flat['consent_donnees'] = consentements.get('donnees', False)
+        flat['consent_anonyme'] = consentements.get('anonyme', False)
         
         identity = data.get('identity', {})
         flat['last_name'] = identity.get('last_name', '')
@@ -700,10 +865,41 @@ class InputForm(ctk.CTkScrollableFrame):
         flat['sv2_vo2'] = sv2.get('vo2_ml_kg_min', '')
         flat['measured_vo2max'] = stress.get('measured_vo2max', '')
         flat['max_hr'] = stress.get('max_hr', '')
+        flat['vma'] = stress.get('vma', '')
         flat['first_stage_speed'] = stress.get('first_stage_speed', '')
         flat['last_stage_speed'] = stress.get('last_stage_speed', '')
         
         flat['conseils_entrainements'] = data.get('conseils_entrainements', '')
+        
+        # RSI
+        rsi = data.get('rsi', {})
+        flat['rsi_avant'] = rsi.get('avant', '')
+        flat['rsi_apres'] = rsi.get('apres', '')
+        
+        # CMJ
+        cmj = data.get('cmj', {})
+        cmj_avant = cmj.get('avant', {})
+        flat['cmj_avant_hauteur'] = cmj_avant.get('hauteur_cm', '')
+        flat['cmj_avant_force'] = cmj_avant.get('force_max_kfg_kg', '')
+        flat['cmj_avant_puissance'] = cmj_avant.get('puissance_max_w_kg', '')
+        cmj_apres = cmj.get('apres', {})
+        flat['cmj_apres_hauteur'] = cmj_apres.get('hauteur_cm', '')
+        flat['cmj_apres_force'] = cmj_apres.get('force_max_kfg_kg', '')
+        flat['cmj_apres_puissance'] = cmj_apres.get('puissance_max_w_kg', '')
+        
+        # Notes privées
+        flat['notes_privees'] = data.get('notes_privees', '')
+        
+        # Altitude
+        flat['altitude_vie'] = data.get('altitude_vie_m', '')
+        
+        # SpO2
+        spo2 = data.get('spo2', {})
+        flat['spo2_avant'] = spo2.get('avant', '')
+        flat['spo2_apres'] = spo2.get('apres', '')
+        
+        # Lactatémie repos
+        flat['lactatemie_repos'] = data.get('lactatemie_repos', '')
         
         # Set values
         for key, value in flat.items():
