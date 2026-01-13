@@ -341,7 +341,7 @@ class ProfileTab(ctk.CTkFrame):
         if self.current_filename:
             self._save_profile(silent=True)
         
-        from profile_template import get_empty_profile
+        from core.profile_template import get_empty_profile
         empty = get_empty_profile()
         
         try:

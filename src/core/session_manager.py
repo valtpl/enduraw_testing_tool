@@ -58,7 +58,7 @@ class ProfileMatch:
 class SessionManager:
     """Manages sessions and profiles"""
     
-    SESSIONS_DIR = "Sessions"
+    SESSIONS_DIR = "sessions"
     SESSION_FILE = "session.json"
     PROFILES_DIR = "profiles"
     XML_DIR = "xml"

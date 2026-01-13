@@ -40,6 +40,14 @@ class DataTransformer:
         result.test_date = filename_data.get('date', '')
         result.test_type = "VO2max"
         
+        # Build consentements
+        consentements = manual_input.get('consentements', {})
+        result.consentements = {
+            'risques': consentements.get('risques', False),
+            'donnees': consentements.get('donnees', False),
+            'anonyme': consentements.get('anonyme', False)
+        }
+        
         # Build seuils
         result.seuils = self._build_seuils(xml_data.get('summary_data', {}), manual_input)
         
@@ -84,19 +92,18 @@ class DataTransformer:
         sv1_data = thresholds.get('sv1', {})
         sv2_data = thresholds.get('sv2', {})
         
-        # Get VMA from XML for percentage calculation
-        v_row = summary_data.get("v", {})
-        max_speed = self._safe_float(v_row.get('Valeurs Maximales Absolues'))
+        # Get VMA from manual input (form)
+        vma_value = stress_results.get('vma')
         
         # SV1 - From manual input ONLY
         sv1 = Seuil()
         sv1.fc = sv1_data.get('hr_bpm')
         sv1.allure = sv1_data.get('pace_km_h')
-        sv1.vo2 = None  # User can add if needed
+        sv1.vo2 = sv1_data.get('vo2_ml_kg_min')
         
         # Calculate pourcentage_vma if we have VMA and allure
-        if sv1.allure and max_speed:
-            sv1.pourcentage_vma = int((sv1.allure / max_speed) * 100)
+        if sv1.allure and vma_value:
+            sv1.pourcentage_vma = int((sv1.allure / vma_value) * 100)
         
         seuils['SV1'] = sv1.to_dict()
         
@@ -104,10 +111,10 @@ class DataTransformer:
         sv2 = Seuil()
         sv2.fc = sv2_data.get('hr_bpm')
         sv2.allure = sv2_data.get('pace_km_h')
-        sv2.vo2 = None  # User can add if needed
+        sv2.vo2 = sv2_data.get('vo2_ml_kg_min')
         
-        if sv2.allure and max_speed:
-            sv2.pourcentage_vma = int((sv2.allure / max_speed) * 100)
+        if sv2.allure and vma_value:
+            sv2.pourcentage_vma = int((sv2.allure / vma_value) * 100)
         
         seuils['SV2'] = sv2.to_dict()
         
@@ -117,9 +124,9 @@ class DataTransformer:
         vo2max.fc_max = stress_results.get('max_hr')
         seuils['VO2_max'] = vo2max.to_dict()
         
-        # VMA from XML (this is calculated, not a threshold)
+        # VMA from manual input (form)
         vma = VMA()
-        vma.valeur = max_speed
+        vma.valeur = vma_value
         seuils['VMA'] = vma.to_dict()
         
         return seuils
@@ -153,17 +160,6 @@ class DataTransformer:
     
     def _build_patient_info(self, xml_data: Dict[str, Any], manual_input: Dict[str, Any]) -> Dict[str, Any]:
         """Build patient info section with all manual input fields"""
-        bio_data = xml_data.get('bio_data', {})
-        
-        # Parse weight from XML (format: "68,2 kg")
-        weight_str = bio_data.get('Poids', '')
-        weight_xml = None
-        if weight_str:
-            try:
-                weight_xml = float(weight_str.replace('kg', '').replace(',', '.').strip())
-            except ValueError:
-                pass
-        
         # Get from manual input
         identity = manual_input.get('identity', {})
         body_comp = manual_input.get('body_composition', {})
@@ -183,10 +179,10 @@ class DataTransformer:
         patient_info.specialty = identity.get('specialty', '')
         patient_info.has_coach = identity.get('has_coach', False)
         
-        # Body composition
+        # Body composition - all from manual input only
         patient_info.taille_cm = body_comp.get('height_cm')
         patient_info.poids_actuel = body_comp.get('current_weight')
-        patient_info.poids_debut = body_comp.get('weight_before_test') or weight_xml
+        patient_info.poids_debut = body_comp.get('weight_before_test')
         patient_info.poids_final = body_comp.get('weight_after_test')
         
         # Professional
@@ -219,6 +215,38 @@ class DataTransformer:
         
         # Last stage speed
         patient_info.last_stage_speed = stress.get('last_stage_speed')
+        
+        # RSI
+        rsi_data = manual_input.get('rsi', {})
+        patient_info.rsi_avant = rsi_data.get('avant')
+        patient_info.rsi_apres = rsi_data.get('apres')
+        
+        # CMJ Avant
+        cmj_data = manual_input.get('cmj', {})
+        cmj_avant = cmj_data.get('avant', {})
+        patient_info.cmj_avant_hauteur_cm = cmj_avant.get('hauteur_cm')
+        patient_info.cmj_avant_force_max_kfg_kg = cmj_avant.get('force_max_kfg_kg')
+        patient_info.cmj_avant_puissance_max_w_kg = cmj_avant.get('puissance_max_w_kg')
+        
+        # CMJ Après
+        cmj_apres = cmj_data.get('apres', {})
+        patient_info.cmj_apres_hauteur_cm = cmj_apres.get('hauteur_cm')
+        patient_info.cmj_apres_force_max_kfg_kg = cmj_apres.get('force_max_kfg_kg')
+        patient_info.cmj_apres_puissance_max_w_kg = cmj_apres.get('puissance_max_w_kg')
+        
+        # Notes privées
+        patient_info.notes_privees = manual_input.get('notes_privees', '')
+        
+        # Altitude de vie
+        patient_info.altitude_vie_m = manual_input.get('altitude_vie_m')
+        
+        # SpO2
+        spo2_data = manual_input.get('spo2', {})
+        patient_info.spo2_avant = spo2_data.get('avant')
+        patient_info.spo2_apres = spo2_data.get('apres')
+        
+        # Lactatémie au repos
+        patient_info.lactatemie_repos = manual_input.get('lactatemie_repos')
         
         return patient_info.to_dict()
     

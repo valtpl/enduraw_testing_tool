@@ -108,8 +108,33 @@ class PatientInfo:
     
     # Legacy fields
     annee_debut: Optional[int] = None
+    
+    # RSI (Reactive Strength Index)
     rsi_avant: Optional[float] = None
     rsi_apres: Optional[float] = None
+    
+    # CMJ (Counter Movement Jump) - Avant test
+    cmj_avant_hauteur_cm: Optional[float] = None  # Performance (hauteur de saut en cm)
+    cmj_avant_force_max_kfg_kg: Optional[float] = None  # Force maximale concentrique (kgf/kg)
+    cmj_avant_puissance_max_w_kg: Optional[float] = None  # Puissance maximale (W/kg)
+    
+    # CMJ (Counter Movement Jump) - Après test
+    cmj_apres_hauteur_cm: Optional[float] = None
+    cmj_apres_force_max_kfg_kg: Optional[float] = None  # Force maximale concentrique (kgf/kg)
+    cmj_apres_puissance_max_w_kg: Optional[float] = None
+    
+    # Notes privées (non affichées dans le front)
+    notes_privees: str = ""
+    
+    # Altitude de vie
+    altitude_vie_m: Optional[int] = None
+    
+    # SpO2
+    spo2_avant: Optional[float] = None  # %
+    spo2_apres: Optional[float] = None  # %
+    
+    # Lactatémie au repos
+    lactatemie_repos: Optional[float] = None  # mmol/L
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -160,8 +185,37 @@ class PatientInfo:
             
             # Legacy
             "annee_debut": self.annee_debut,
+            
+            # RSI
             "rsi_avant": self.rsi_avant,
-            "rsi_apres": self.rsi_apres
+            "rsi_apres": self.rsi_apres,
+            
+            # CMJ Avant
+            "cmj_avant": {
+                "hauteur_cm": self.cmj_avant_hauteur_cm,
+                "force_max_kfg_kg": self.cmj_avant_force_max_kfg_kg,
+                "puissance_max_w_kg": self.cmj_avant_puissance_max_w_kg
+            },
+            
+            # CMJ Après
+            "cmj_apres": {
+                "hauteur_cm": self.cmj_apres_hauteur_cm,
+                "force_max_kfg_kg": self.cmj_apres_force_max_kfg_kg,
+                "puissance_max_w_kg": self.cmj_apres_puissance_max_w_kg
+            },
+            
+            # Notes privées
+            "notes_privees": self.notes_privees,
+            
+            # Altitude de vie
+            "altitude_vie_m": self.altitude_vie_m,
+            
+            # SpO2
+            "spo2_avant": self.spo2_avant,
+            "spo2_apres": self.spo2_apres,
+            
+            # Lactatémie au repos
+            "lactatemie_repos": self.lactatemie_repos
         }
 
 
@@ -242,6 +296,7 @@ class TestResult:
     athlete_name: str = ""
     test_date: str = ""  # YYYY-MM-DD
     test_type: str = "VO2max"
+    consentements: Dict[str, bool] = field(default_factory=lambda: {'risques': False, 'donnees': False, 'anonyme': False})
     seuils: Dict[str, Any] = field(default_factory=dict)
     protocole: Dict[str, Any] = field(default_factory=dict)
     test_lactate: Dict[str, Any] = field(default_factory=dict)
@@ -258,6 +313,7 @@ class TestResult:
             "athlete_name": self.athlete_name,
             "test_date": self.test_date,
             "test_type": self.test_type,
+            "consentements": self.consentements,
             "seuils": self.seuils,
             "protocole": self.protocole,
             "test_lactate": self.test_lactate,

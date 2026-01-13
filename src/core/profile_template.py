@@ -16,6 +16,13 @@ def get_empty_profile() -> Dict[str, Any]:
         # User identifier
         'email': '',
         
+        # Section 0: Consentements
+        'consentements': {
+            'risques': False,  # Décharge de responsabilité
+            'donnees': False,  # Sauvegarde des données
+            'anonyme': False   # Utilisation anonymisée
+        },
+        
         # Section 1: Identity
         'identity': {
             'last_name': '',
@@ -91,13 +98,49 @@ def get_empty_profile() -> Dict[str, Any]:
             },
             'measured_vo2max': None,
             'max_hr': None,
+            'vma': None,
             'first_stage_speed': None,
             'last_stage_speed': None,
             'lactate_profile': []
         },
         
         # Section 9: Training Advice
-        'conseils_entrainements': ''
+        'conseils_entrainements': '',
+        
+        # Section 10: RSI (Reactive Strength Index)
+        'rsi': {
+            'avant': None,
+            'apres': None
+        },
+        
+        # Section 11: CMJ (Counter Movement Jump)
+        'cmj': {
+            'avant': {
+                'hauteur_cm': None,  # Performance (hauteur de saut en cm)
+                'force_max_kfg_kg': None,  # Force maximale concentrique (kgf/kg)
+                'puissance_max_w_kg': None  # Puissance maximale (W/kg)
+            },
+            'apres': {
+                'hauteur_cm': None,
+                'force_max_kfg_kg': None,  # Force maximale concentrique (kgf/kg)
+                'puissance_max_w_kg': None
+            }
+        },
+        
+        # Section 12: Notes privées (non affichées dans le front)
+        'notes_privees': '',
+        
+        # Section 13: Altitude de vie
+        'altitude_vie_m': None,
+        
+        # Section 14: SpO2
+        'spo2': {
+            'avant': None,  # %
+            'apres': None   # %
+        },
+        
+        # Section 15: Lactatémie au repos
+        'lactatemie_repos': None  # mmol/L
     }
 
 
@@ -229,6 +272,49 @@ def get_profile_sections() -> List[Dict[str, Any]]:
             'title': 'Conseils',
             'fields': [
                 ('conseils_entrainements', 'Conseils entraînement', 'textbox')
+            ]
+        },
+        {
+            'id': 'rsi',
+            'title': 'RSI (Reactive Strength Index)',
+            'fields': [
+                ('rsi_avant', 'RSI Avant', 'number'),
+                ('rsi_apres', 'RSI Après', 'number')
+            ]
+        },
+        {
+            'id': 'cmj_avant',
+            'title': 'CMJ Avant Test',
+            'fields': [
+                ('cmj_avant_hauteur', 'Hauteur de saut (cm)', 'number'),
+                ('cmj_avant_force', 'Force max concentrique (kgf/kg)', 'number'),
+                ('cmj_avant_puissance', 'Puissance max (W/kg)', 'number')
+            ]
+        },
+        {
+            'id': 'cmj_apres',
+            'title': 'CMJ Après Test',
+            'fields': [
+                ('cmj_apres_hauteur', 'Hauteur de saut (cm)', 'number'),
+                ('cmj_apres_force', 'Force max concentrique (kgf/kg)', 'number'),
+                ('cmj_apres_puissance', 'Puissance max (W/kg)', 'number')
+            ]
+        },
+        {
+            'id': 'physiological',
+            'title': 'Données Physiologiques',
+            'fields': [
+                ('altitude_vie', 'Altitude de vie (m)', 'number'),
+                ('spo2_avant', 'SpO2 Avant (%)', 'number'),
+                ('spo2_apres', 'SpO2 Après (%)', 'number'),
+                ('lactatemie_repos', 'Lactatémie au repos (mmol/L)', 'number')
+            ]
+        },
+        {
+            'id': 'notes',
+            'title': 'Notes Privées',
+            'fields': [
+                ('notes_privees', 'Notes internes (non visibles)', 'textbox')
             ]
         }
     ]
