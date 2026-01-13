@@ -4,6 +4,7 @@ Cross-platform desktop application for processing MetaLyzer XML exports
 """
 import os
 import sys
+from pathlib import Path
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 from typing import Dict, List, Any, Optional
