@@ -183,7 +183,7 @@ class MatchListItem(ctk.CTkFrame):
         # XML name
         xml = match_info.get('xml_filename', '')
         self.xml_label = ctk.CTkLabel(
-            self, text=f"📄 {xml[:30]}..." if len(xml) > 30 else f"📄 {xml}",
+            self, text=f"{xml[:30]}..." if len(xml) > 30 else xml,
             font=ctk.CTkFont(size=11), text_color="gray", anchor="w"
         )
         self.xml_label.grid(row=1, column=0, padx=10, pady=0, sticky="w")
@@ -195,9 +195,9 @@ class MatchListItem(ctk.CTkFrame):
         # Export button
         exported = match_info.get('exported', False)
         self.export_btn = ctk.CTkButton(
-            btn_frame, text="Exporté" if exported else "Exporter",
+            btn_frame, text="Exporte" if exported else "Exporter",
             width=80, height=28,
-            fg_color="green" if exported else None,
+            fg_color="#2fa572" if exported else None,
             command=lambda: on_export(match_info) if on_export else None
         )
         self.export_btn.grid(row=0, column=0, padx=2)
@@ -205,7 +205,7 @@ class MatchListItem(ctk.CTkFrame):
         # Remove button
         self.remove_btn = ctk.CTkButton(
             btn_frame, text="X", width=30, height=28,
-            fg_color="red", hover_color="darkred",
+            fg_color="#c0392b", hover_color="#a93226",
             command=lambda: on_remove(match_info) if on_remove else None
         )
         self.remove_btn.grid(row=0, column=1, padx=2)

@@ -92,8 +92,10 @@ class DataTransformer:
         sv1_data = thresholds.get('sv1', {})
         sv2_data = thresholds.get('sv2', {})
         
-        # Get VMA from manual input (form)
+        # Get VMA, FC max, VO2max from manual input (form)
         vma_value = stress_results.get('vma')
+        fc_max_value = stress_results.get('max_hr')
+        vo2max_value = stress_results.get('measured_vo2max')
         
         # SV1 - From manual input ONLY
         sv1 = Seuil()
@@ -105,7 +107,13 @@ class DataTransformer:
         if sv1.allure and vma_value:
             sv1.pourcentage_vma = int((sv1.allure / vma_value) * 100)
         
-        seuils['SV1'] = sv1.to_dict()
+        # Calculate percentage of FC max and VO2max for SV1
+        sv1_dict = sv1.to_dict()
+        if sv1.fc and fc_max_value:
+            sv1_dict['pourcentage_fc_max'] = int((sv1.fc / fc_max_value) * 100)
+        if sv1.vo2 and vo2max_value:
+            sv1_dict['pourcentage_vo2max'] = int((sv1.vo2 / vo2max_value) * 100)
+        seuils['SV1'] = sv1_dict
         
         # SV2 - From manual input ONLY
         sv2 = Seuil()
@@ -116,13 +124,26 @@ class DataTransformer:
         if sv2.allure and vma_value:
             sv2.pourcentage_vma = int((sv2.allure / vma_value) * 100)
         
-        seuils['SV2'] = sv2.to_dict()
+        # Calculate percentage of FC max and VO2max for SV2
+        sv2_dict = sv2.to_dict()
+        if sv2.fc and fc_max_value:
+            sv2_dict['pourcentage_fc_max'] = int((sv2.fc / fc_max_value) * 100)
+        if sv2.vo2 and vo2max_value:
+            sv2_dict['pourcentage_vo2max'] = int((sv2.vo2 / vo2max_value) * 100)
+        seuils['SV2'] = sv2_dict
         
         # VO2max - From manual input ONLY
         vo2max = VO2Max()
-        vo2max.valeur = stress_results.get('measured_vo2max')
-        vo2max.fc_max = stress_results.get('max_hr')
-        seuils['VO2_max'] = vo2max.to_dict()
+        vo2max.valeur = vo2max_value
+        vo2max.fc_max = fc_max_value
+        vo2max_dict = vo2max.to_dict()
+        
+        # VO2 peak (L/min) = vo2max (ml/min/kg) * weight (kg) / 1000
+        weight = manual_input.get('body_composition', {}).get('current_weight')
+        if vo2max_value and weight and weight > 0:
+            vo2max_dict['vo2_peak_l_min'] = round(vo2max_value * weight / 1000, 2)
+        
+        seuils['VO2_max'] = vo2max_dict
         
         # VMA from manual input (form)
         vma = VMA()

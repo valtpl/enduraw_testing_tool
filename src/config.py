@@ -51,5 +51,18 @@ UI_COLORS = {
     "warning": "#f0ad4e",
     "danger": "#d9534f",
     "background": "#2b2b2b",
-    "surface": "#333333"
+    "surface": "#333333",
 }
+
+# Sidebar navigation colors (light, dark)
+SIDEBAR_COLORS = {
+    "bg":          ("#f5f5f7", "#1c1c1e"),
+    "btn_active":  ("#e8e8ec", "#38383a"),
+    "btn_hover":   ("#dcdce0", "#2c2c2e"),
+    "btn_text":    ("#1d1d1f", "#f5f5f7"),
+    "separator":   ("#d2d2d7", "#3a3a3c"),
+    "accent":      "#0071e3",
+}
+
+# Navbar width
+SIDEBAR_WIDTH = 220
