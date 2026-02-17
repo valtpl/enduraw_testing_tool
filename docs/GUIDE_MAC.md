@@ -1,93 +1,161 @@
-# Enduraw Testing Data - Guide d'installation Mac
+# Enduraw Testing Tool - Guide Mac
 
-## 📋 Prérequis
+## 1. Installer Python
 
-Vous devez installer Python 3 sur votre Mac.
+Ouvrir le **Terminal** (Applications > Utilitaires > Terminal) et coller :
+
+```bash
+# Installer Homebrew (gestionnaire de paquets) si pas encore fait
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Installer Python 3
+brew install python3
+
+# Verifier
+python3 --version
+```
+
+Si Homebrew est deja installe, passer directement a `brew install python3`.
 
 ---
 
-## 🚀 Installation 
+## 2. Installer les dependances
 
-### Étape 1 : Installer Python
-
-### Étape 2 : Installer les dépendances
-
-1. Copiez-collez cette commande et appuyez sur Entrée :
+Dans le Terminal, aller dans le dossier du projet :
 
 ```bash
-pip3 install customtkinter pillow
+# Remplacer le chemin par celui ou se trouve le projet sur votre Mac
+cd /chemin/vers/enduraw_testing_tool
+
+# Installer tout d'un coup
+pip3 install -r requirements.txt
 ```
 
 ---
 
-## ▶️ Lancer l'application
-
-### Première fois
-
-1. Décompressez le dossier `tcp_data_processor.zip` 
-2. Ouvrez **Terminal**
-3. Tapez `cd ` puis **glissez-déposez** le dossier `tcp_data_processor` dans le Terminal
-4. Appuyez sur Entrée
-5. Tapez cette commande :
+## 3. Configurer MongoDB
 
 ```bash
+# Copier le template
+cp .env.example .env
+
+# Editer avec nano (ou n'importe quel editeur)
+nano .env
+```
+
+Remplir la ligne `MONGO_URI=` avec l'URI fournie, puis sauvegarder :
+- `Ctrl + O` pour sauvegarder
+- `Ctrl + X` pour quitter
+
+---
+
+## 4. Lancer l'app (methode rapide)
+
+```bash
+cd /chemin/vers/enduraw_testing_tool
 python3 main.py
 ```
 
-6. L'application s'ouvre !
+---
 
-### Les fois suivantes
+## 5. Creer une vraie App Mac avec Automator
 
-Vous pouvez créer un raccourci :
+C'est la methode recommandee pour avoir une icone cliquable dans le Dock,
+comme n'importe quelle application.
 
-1. Ouvrez **TextEdit**
-2. Allez dans Format > Convertir au format Texte
-3. Collez ce script (remplacez le chemin par le vôtre) :
+### Etape 1 : Ouvrir Automator
+
+- Ouvrir **Finder**
+- Aller dans **Applications**
+- Ouvrir **Automator** (icone robot)
+
+### Etape 2 : Creer une Application
+
+- Automator demande quel type de document creer
+- Choisir **"Application"**
+- Cliquer sur **"Choisir"**
+
+### Etape 3 : Ajouter l'action Shell
+
+- Dans la barre de recherche en haut a gauche, taper : `shell`
+- Double-cliquer sur **"Executer un script Shell"** (ou "Run Shell Script")
+- Un editeur de texte apparait a droite
+
+### Etape 4 : Coller le script
+
+Effacer le contenu par defaut (`cat`) et coller ceci :
 
 ```bash
 #!/bin/bash
-cd /Users/VOTRE_NOM/Downloads/tcp_data_processor
-python3 main.py
+
+# IMPORTANT : modifier ce chemin vers votre dossier projet
+PROJECT_DIR="/Users/VOTRE_NOM/chemin/vers/enduraw_testing_tool"
+
+cd "$PROJECT_DIR"
+
+# Charger les variables d'environnement (.env)
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
+
+# Lancer l'application
+/usr/local/bin/python3 main.py
 ```
 
-4. Enregistrez sous `LancerEnduraw.command` sur le Bureau
-5. Dans Terminal, rendez-le exécutable :
+**IMPORTANT** : Remplacer `/Users/VOTRE_NOM/chemin/vers/enduraw_testing_tool`
+par le vrai chemin du projet sur votre Mac.
 
-```bash
-chmod +x ~/Desktop/LancerEnduraw.command
-```
+Pour trouver le chemin : ouvrir le Terminal, taper `cd `, puis faire
+glisser le dossier du projet dans le Terminal. Le chemin s'affiche.
 
-6. Double-cliquez sur le fichier pour lancer l'app !
+**Note sur le chemin Python** : selon votre installation, Python peut etre a :
+- `/usr/local/bin/python3` (Homebrew Intel)
+- `/opt/homebrew/bin/python3` (Homebrew Apple Silicon M1/M2/M3)
+- `/usr/bin/python3` (Python systeme)
+
+Pour savoir : taper `which python3` dans le Terminal et utiliser ce chemin.
+
+### Etape 5 : Sauvegarder l'application
+
+- Fichier > Enregistrer (Cmd + S)
+- Nom : **Enduraw**
+- Emplacement : **Applications** (ou Bureau)
+- Format de fichier : **Application** (deja selectionne)
+
+### Etape 6 : Utiliser l'app
+
+- Aller dans le dossier ou vous avez sauvegarde
+- **Double-cliquer** sur `Enduraw.app` pour lancer
+- Pour l'ajouter au **Dock** : faire glisser l'icone vers le Dock
+- Pour l'ajouter au **Launchpad** : si sauvegardee dans Applications, elle y apparait automatiquement
 
 ---
 
-## 📋 Utilisation de l'application
+## 6. Ajouter une icone personnalisee (optionnel)
 
-1. **Sélectionner un dossier** contenant les fichiers XML MetaLyzer
-2. **Cliquer sur un test** dans la liste de gauche
-3. **Remplir le formulaire** avec les données manuelles
-   - L'email est **obligatoire** (c'est l'identifiant utilisateur)
-4. **Sauvegarder** les données avec le bouton "Enregistrer les données"
-5. **Exporter** en JSON avec "Exporter Sélectionné" ou "Exporter Tous"
+1. Trouver une image PNG pour l'icone
+2. Clic droit sur `Enduraw.app` > **Lire les informations**
+3. Faire glisser l'image sur la petite icone en haut a gauche de la fenetre d'informations
 
 ---
 
-## 📁 Où trouver les fichiers exportés ?
+## Problemes frequents
 
-Les fichiers JSON sont créés dans un dossier `Output` à côté des fichiers XML source.
-
----
-
-## 🆘 Problèmes fréquents
-
-### "command not found: pip3"
-→ Python n'est pas installé. Refaites l'étape 1.
+### "command not found: python3"
+Python n'est pas installe. Reprendre l'etape 1.
 
 ### "ModuleNotFoundError: No module named 'customtkinter'"
-→ Les dépendances ne sont pas installées. Refaites l'étape 2.
+Les dependances ne sont pas installees. Reprendre l'etape 2.
 
-### L'application ne s'ouvre pas
-→ Vérifiez que vous êtes bien dans le bon dossier avec `cd`.
+### L'app Automator s'ouvre mais se ferme aussitot
+Le chemin du projet dans le script est incorrect. Verifier avec
+`ls /chemin/vers/enduraw_testing_tool/main.py` dans le Terminal.
 
----
+### "Permission denied"
+Executer une fois dans le Terminal :
+```bash
+chmod +x /chemin/vers/enduraw_testing_tool/run.sh
+```
 
