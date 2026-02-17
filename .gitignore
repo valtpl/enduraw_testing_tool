@@ -7,12 +7,16 @@ __pycache__/
 # PyInstaller
 build/
 dist/
+*.spec
 
 # Environnements virtuels
 venv/
 .venv/
 env/
+
+# Secrets / config (NEVER commit)
 .env
+mongo_config.json
 
 # Dossier de sortie du projet
 Output/
@@ -23,7 +27,10 @@ Output/
 
 # OS
 .DS_Store
-Thumbs.dbq
+Thumbs.db
 
-#ignorés les sessions
+# Sessions (user data)
 sessions/
+
+# Executables
+*.exe

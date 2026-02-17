@@ -13,11 +13,13 @@ from utils.xml_parser import TCPXmlParser
 from core.data_transformer import DataTransformer
 from utils.json_exporter import JsonExporter
 from core.session_manager import SessionManager
+from core.mongo_service import MongoService
+from core.protocol_store import ProtocolStore
 from ui.app_tabs import SessionListItem, ProfileListItem, XmlListItem, MatchListItem
-from config import APP_NAME, APP_VERSION
+from config import APP_NAME, APP_VERSION, SIDEBAR_COLORS, SIDEBAR_WIDTH
 
-# Import InputForm from original main.py
-from main import InputForm
+# Import TabbedInputForm (3 tabs: Profil/Perso, Mesures Test, Analyse)
+from ui.tabbed_form import TabbedInputForm
 
 # Set appearance
 ctk.set_appearance_mode("dark")
@@ -58,8 +60,8 @@ class SessionTab(ctk.CTkFrame):
         self.open_btn = ctk.CTkButton(btn_frame, text="Ouvrir", command=self._open_session, state="disabled")
         self.open_btn.grid(row=0, column=1, padx=5)
         
-        self.delete_btn = ctk.CTkButton(btn_frame, text="Supprimer", fg_color="red", 
-                                        hover_color="darkred", command=self._delete_session, state="disabled")
+        self.delete_btn = ctk.CTkButton(btn_frame, text="Supprimer", fg_color="#c0392b", 
+                                        hover_color="#a93226", command=self._delete_session, state="disabled")
         self.delete_btn.grid(row=0, column=2, padx=5)
         
         # Session list
@@ -207,9 +209,11 @@ class NewSessionDialog(ctk.CTkToplevel):
 class ProfileTab(ctk.CTkFrame):
     """Tab for managing profiles"""
     
-    def __init__(self, master, session_manager: SessionManager, **kwargs):
+    def __init__(self, master, session_manager: SessionManager, mongo_service: Optional[MongoService] = None, protocol_store: Optional[ProtocolStore] = None, **kwargs):
         super().__init__(master, **kwargs)
         self.session_manager = session_manager
+        self.mongo_service = mongo_service
+        self.protocol_store = protocol_store
         self.profile_items: List[ProfileListItem] = []
         self.selected_item: Optional[ProfileListItem] = None
         self.current_filename: Optional[str] = None
@@ -235,8 +239,8 @@ class ProfileTab(ctk.CTkFrame):
         self.new_btn = ctk.CTkButton(header, text="+", width=30, command=self._new_profile)
         self.new_btn.grid(row=0, column=1, padx=5)
         
-        self.delete_btn = ctk.CTkButton(header, text="🗑", width=30, fg_color="red", 
-                                        command=self._delete_profile, state="disabled")
+        self.delete_btn = ctk.CTkButton(header, text="Suppr.", width=50, fg_color="#c0392b",
+                                        hover_color="#a93226", command=self._delete_profile, state="disabled")
         self.delete_btn.grid(row=0, column=2)
         
         # List
@@ -262,8 +266,8 @@ class ProfileTab(ctk.CTkFrame):
         self.save_btn = ctk.CTkButton(form_header, text="Sauvegarder", command=self._save_profile, state="disabled")
         self.save_btn.grid(row=0, column=1)
         
-        # Form
-        self.form = InputForm(right_panel)
+        # Form (tabbed: Profil/Perso, Mesures Test, Analyse)
+        self.form = TabbedInputForm(right_panel, on_db_lookup=self._on_db_lookup, protocol_store=self.protocol_store)
         self.form.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
     
     def refresh(self):
@@ -360,6 +364,13 @@ class ProfileTab(ctk.CTkFrame):
         if not self.current_filename:
             return
         
+        # Validate data before saving
+        is_valid, msg = self.form.validate_all()
+        if not is_valid:
+            if not silent:
+                messagebox.showerror("Erreur de Validation", msg)
+            return
+
         # Check if file still exists (might have been deleted)
         profile_exists = self.session_manager.get_profile(self.current_filename) is not None
         if not profile_exists:
@@ -432,13 +443,45 @@ class ProfileTab(ctk.CTkFrame):
         self.current_filename = None
         self.refresh()
 
+    # ------------------------------------------------------------------ #
+    #  DB Lookup                                                          #
+    # ------------------------------------------------------------------ #
+    def _on_db_lookup(self, email: str):
+        """
+        Called when user clicks the DB lookup button in the form.
+        Searches MongoDB for the user and merges data into empty fields.
+        """
+        if not self.mongo_service or not self.mongo_service.is_connected:
+            self.form.set_db_status("Non connecte a la DB", color="red")
+            return
+
+        self.form.set_db_status("Recherche en cours...", color="gray")
+        self.update_idletasks()  # Force UI refresh
+
+        user = self.mongo_service.find_user_by_email(email)
+        if user:
+            # Convert DB doc to profile format
+            db_profile = MongoService.db_user_to_profile(user)
+            filled = self.form.merge_db_data(db_profile)
+            username = user.get("username", email)
+            self.form.set_db_status(
+                f"Trouve : {username} - {filled} champ(s) pre-rempli(s)",
+                color="green"
+            )
+        else:
+            self.form.set_db_status(
+                "Aucun compte trouve - un profil sera cree a l'export",
+                color="orange"
+            )
+
 
 class XmlMatchTab(ctk.CTkFrame):
     """Tab for matching XMLs with profiles"""
     
-    def __init__(self, master, session_manager: SessionManager, **kwargs):
+    def __init__(self, master, session_manager: SessionManager, mongo_service: Optional[MongoService] = None, **kwargs):
         super().__init__(master, **kwargs)
         self.session_manager = session_manager
+        self.mongo_service = mongo_service
         self.parser = TCPXmlParser()
         self.transformer = DataTransformer()
         self.exporter = JsonExporter()
@@ -513,8 +556,19 @@ class XmlMatchTab(ctk.CTkFrame):
         match_panel.grid_columnconfigure(0, weight=1)
         match_panel.grid_rowconfigure(1, weight=1)
         
-        ctk.CTkLabel(match_panel, text="Associations", font=ctk.CTkFont(size=14, weight="bold")).grid(
-            row=0, column=0, padx=10, pady=5, sticky="w")
+        match_header = ctk.CTkFrame(match_panel, fg_color="transparent")
+        match_header.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        match_header.grid_columnconfigure(0, weight=1)
+        
+        ctk.CTkLabel(match_header, text="Associations", font=ctk.CTkFont(size=14, weight="bold")).grid(
+            row=0, column=0, padx=5, sticky="w")
+        
+        self.export_all_btn = ctk.CTkButton(
+            match_header, text="Exporter tout", width=140,
+            fg_color="#2fa572", hover_color="#1e8c5e",
+            command=self._export_all_matches
+        )
+        self.export_all_btn.grid(row=0, column=1, padx=5)
         
         self.match_list = ctk.CTkScrollableFrame(match_panel, height=150)
         self.match_list.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
@@ -692,6 +746,66 @@ class XmlMatchTab(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Erreur", f"Erreur lors de l'export: {e}")
 
+    def _export_all_matches(self):
+        """Export all matched profiles+XML at once."""
+        if not self.session_manager.current_session:
+            messagebox.showwarning("Attention", "Aucune session active")
+            return
+        
+        matches = self.session_manager.matches
+        if not matches:
+            messagebox.showinfo("Info", "Aucune association à exporter")
+            return
+        
+        success = 0
+        errors = []
+        
+        for match in matches:
+            profile_name = match.profile_name
+            xml_filename = match.xml_filename
+            
+            try:
+                profile_data = self.session_manager.get_profile(profile_name)
+                if not profile_data:
+                    errors.append(f"{profile_name}: profil non trouvé")
+                    continue
+                
+                if not profile_data.get('email'):
+                    errors.append(f"{profile_name}: email manquant")
+                    continue
+                
+                xml_path = self.session_manager.get_xml_path(xml_filename)
+                if not xml_path:
+                    errors.append(f"{xml_filename}: XML non trouvé")
+                    continue
+                
+                xml_data = self.parser.parse_file(xml_path)
+                output = self.transformer.transform(xml_data, profile_data)
+                
+                identity = profile_data.get('identity', {})
+                name = f"{identity.get('last_name', 'Unknown')}_{identity.get('first_name', '')}".strip('_')
+                date = self.session_manager.current_session.date
+                output_filename = f"{name}_{date}.json"
+                
+                self.session_manager.save_output(output_filename, output)
+                self.session_manager.mark_as_exported(profile_name)
+                success += 1
+                
+            except Exception as e:
+                errors.append(f"{profile_name}: {e}")
+        
+        self._refresh_matches()
+        
+        # Show summary
+        msg = f"{success}/{len(matches)} exporté(s) avec succès."
+        if errors:
+            msg += "\n\nErreurs:\n" + "\n".join(f"• {e}" for e in errors)
+            messagebox.showwarning("Export terminé", msg)
+        else:
+            output_dir = self.session_manager.get_output_dir()
+            msg += f"\n\nDossier: {output_dir}"
+            messagebox.showinfo("Export terminé", msg)
+
 
 class TCPDataProcessorSession(ctk.CTk):
     """Main application with tabbed interface"""
@@ -710,9 +824,15 @@ class TCPDataProcessorSession(ctk.CTk):
             base_path = os.path.dirname(os.path.abspath(__file__))
         
         self.session_manager = SessionManager(os.path.dirname(base_path))
+        self.mongo_service = MongoService(os.path.dirname(base_path))
+        self.protocol_store = ProtocolStore(os.path.dirname(base_path))
         
         self._set_icon()
         self._create_ui()
+        
+        # Auto-connect if URI was saved previously
+        if self.mongo_service.uri:
+            self.after(500, self._auto_connect_mongo)
     
     def _set_icon(self):
         try:
@@ -723,57 +843,265 @@ class TCPDataProcessorSession(ctk.CTk):
             pass
     
     def _create_ui(self):
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-        
-        # Header
-        header = ctk.CTkFrame(self, height=50, corner_radius=0)
-        header.grid(row=0, column=0, sticky="ew")
-        header.grid_columnconfigure(1, weight=1)
-        
-        title = ctk.CTkLabel(header, text=f"{APP_NAME}", font=ctk.CTkFont(size=18, weight="bold"))
-        title.grid(row=0, column=0, padx=20, pady=10)
-        
-        self.session_info = ctk.CTkLabel(header, text="Aucune session active", text_color="gray")
-        self.session_info.grid(row=0, column=1, padx=20, pady=10)
-        
-        # Theme switch
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        # ================================================================
+        #  SIDEBAR  (fixed width, left)
+        # ================================================================
+        self.sidebar = ctk.CTkFrame(
+            self, width=SIDEBAR_WIDTH, corner_radius=0,
+            fg_color=SIDEBAR_COLORS["bg"]
+        )
+        self.sidebar.grid(row=0, column=0, sticky="nsew")
+        self.sidebar.grid_propagate(False)
+        self.sidebar.grid_columnconfigure(0, weight=1)
+
+        # App name -------------------------------------------------------
+        ctk.CTkLabel(
+            self.sidebar, text="ENDURAW",
+            font=ctk.CTkFont(size=20, weight="bold"),
+        ).grid(row=0, column=0, padx=20, pady=(24, 4), sticky="w")
+
+        ctk.CTkLabel(
+            self.sidebar, text="Testing Tool",
+            font=ctk.CTkFont(size=12), text_color="gray",
+        ).grid(row=1, column=0, padx=20, pady=(0, 16), sticky="w")
+
+        # Separator -------------------------------------------------------
+        sep1 = ctk.CTkFrame(self.sidebar, height=1,
+                            fg_color=SIDEBAR_COLORS["separator"])
+        sep1.grid(row=2, column=0, sticky="ew", padx=16, pady=4)
+
+        # Navigation items ------------------------------------------------
+        nav_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        nav_frame.grid(row=3, column=0, sticky="ew", padx=8, pady=8)
+        nav_frame.grid_columnconfigure(0, weight=1)
+
+        self._nav_buttons: Dict[str, ctk.CTkButton] = {}
+        self._pages: Dict[str, ctk.CTkFrame] = {}
+        self._current_page: Optional[str] = None
+
+        nav_items = ["Sessions", "Profils", "XML Matching"]
+        for idx, name in enumerate(nav_items):
+            btn = ctk.CTkButton(
+                nav_frame, text=name, anchor="w",
+                height=36, corner_radius=8,
+                fg_color="transparent",
+                text_color=SIDEBAR_COLORS["btn_text"],
+                hover_color=SIDEBAR_COLORS["btn_hover"],
+                font=ctk.CTkFont(size=13),
+                command=lambda n=name: self._show_page(n),
+            )
+            btn.grid(row=idx, column=0, sticky="ew", pady=2)
+            self._nav_buttons[name] = btn
+
+        # Separator -------------------------------------------------------
+        sep2 = ctk.CTkFrame(self.sidebar, height=1,
+                            fg_color=SIDEBAR_COLORS["separator"])
+        sep2.grid(row=4, column=0, sticky="ew", padx=16, pady=4)
+
+        # Protocoles button ------------------------------------------------
+        self.settings_btn = ctk.CTkButton(
+            self.sidebar, text="Protocoles", anchor="w",
+            height=36, corner_radius=8,
+            fg_color="transparent",
+            text_color=SIDEBAR_COLORS["btn_text"],
+            hover_color=SIDEBAR_COLORS["btn_hover"],
+            font=ctk.CTkFont(size=13),
+            command=self._open_protocol_manager,
+        )
+        self.settings_btn.grid(row=5, column=0, sticky="ew", padx=8, pady=2)
+
+        # Push remaining items to bottom -----------------------------------
+        self.sidebar.grid_rowconfigure(6, weight=1)
+
+        # Theme toggle (bottom of sidebar) ---------------------------------
+        bottom_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        bottom_frame.grid(row=7, column=0, sticky="ew", padx=8, pady=(0, 16))
+        bottom_frame.grid_columnconfigure(0, weight=1)
+
         self.theme_btn = ctk.CTkButton(
-            header, text="Light Mode", width=100,
-            command=self._toggle_theme
+            bottom_frame, text="Light Mode", anchor="w",
+            height=32, corner_radius=8,
+            fg_color="transparent",
+            text_color="gray",
+            hover_color=SIDEBAR_COLORS["btn_hover"],
+            font=ctk.CTkFont(size=12),
+            command=self._toggle_theme,
         )
-        self.theme_btn.grid(row=0, column=2, padx=10, pady=10)
-        
-        # Tab view
-        self.tabview = ctk.CTkTabview(self)
-        self.tabview.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
-        
-        # Create tabs
-        self.tabview.add("Sessions")
-        self.tabview.add("Profils")
-        self.tabview.add("XML Matching")
-        
-        # Session tab
+        self.theme_btn.grid(row=0, column=0, sticky="ew", pady=2)
+
+        # ================================================================
+        #  MAIN CONTENT  (right side)
+        # ================================================================
+        main_container = ctk.CTkFrame(self, fg_color="transparent")
+        main_container.grid(row=0, column=1, sticky="nsew")
+        main_container.grid_columnconfigure(0, weight=1)
+        main_container.grid_rowconfigure(1, weight=1)
+
+        # Row 0: MongoDB connection bar ------------------------------------
+        self._create_mongo_bar(main_container)
+
+        # Row 1: Content area (pages stacked, one visible at a time) -------
+        self.content = ctk.CTkFrame(main_container, fg_color="transparent")
+        self.content.grid(row=1, column=0, sticky="nsew")
+        self.content.grid_columnconfigure(0, weight=1)
+        self.content.grid_rowconfigure(0, weight=1)
+
+        # Session page
         self.session_tab = SessionTab(
-            self.tabview.tab("Sessions"),
-            self.session_manager,
-            on_session_loaded=self._on_session_loaded
+            self.content, self.session_manager,
+            on_session_loaded=self._on_session_loaded,
         )
-        self.session_tab.pack(fill="both", expand=True)
-        
-        # Profile tab
+        self._pages["Sessions"] = self.session_tab
+
+        # Profile page
         self.profile_tab = ProfileTab(
-            self.tabview.tab("Profils"),
-            self.session_manager
+            self.content, self.session_manager,
+            mongo_service=self.mongo_service,
+            protocol_store=self.protocol_store,
         )
-        self.profile_tab.pack(fill="both", expand=True)
-        
-        # XML Match tab
+        self._pages["Profils"] = self.profile_tab
+
+        # XML Match page
         self.match_tab = XmlMatchTab(
-            self.tabview.tab("XML Matching"),
-            self.session_manager
+            self.content, self.session_manager,
+            mongo_service=self.mongo_service,
         )
-        self.match_tab.pack(fill="both", expand=True)
+        self._pages["XML Matching"] = self.match_tab
+
+        # Session info label (top-right, inside mongo bar or header)
+        # (already part of mongo bar)
+
+        # Show first page
+        self._show_page("Sessions")
+
+    # ------------------------------------------------------------------ #
+    #  Sidebar navigation helpers                                         #
+    # ------------------------------------------------------------------ #
+    def _show_page(self, name: str):
+        """Show the requested page and highlight its nav button."""
+        if self._current_page == name:
+            return
+        # Hide all pages
+        for page in self._pages.values():
+            page.pack_forget()
+        # Show selected
+        self._pages[name].pack(in_=self.content, fill="both", expand=True)
+        # Update button styles
+        for btn_name, btn in self._nav_buttons.items():
+            if btn_name == name:
+                btn.configure(fg_color=SIDEBAR_COLORS["btn_active"])
+            else:
+                btn.configure(fg_color="transparent")
+        self._current_page = name
+    
+    # ------------------------------------------------------------------ #
+    #  MongoDB connection bar                                             #
+    # ------------------------------------------------------------------ #
+    def _create_mongo_bar(self, parent):
+        """Create a compact connection bar for MongoDB URI."""
+        bar = ctk.CTkFrame(parent, height=44, corner_radius=0,
+                           fg_color=("gray90", "gray17"))
+        bar.grid(row=0, column=0, sticky="ew")
+        bar.grid_columnconfigure(2, weight=1)
+
+        # Session info (left side)
+        self.session_info = ctk.CTkLabel(
+            bar, text="Aucune session active", text_color="gray",
+            font=ctk.CTkFont(size=12),
+        )
+        self.session_info.grid(row=0, column=0, padx=(15, 20), pady=8)
+
+        # DB label
+        db_label = ctk.CTkLabel(bar, text="MongoDB", font=ctk.CTkFont(size=12))
+        db_label.grid(row=0, column=1, padx=(10, 5), pady=8)
+
+        # URI entry
+        self.mongo_uri_entry = ctk.CTkEntry(
+            bar,
+            placeholder_text="mongodb+srv://user:pass@cluster.mongodb.net/enduraw",
+            show="\u2022", width=400,
+        )
+        self.mongo_uri_entry.grid(row=0, column=2, padx=5, pady=8, sticky="ew")
+
+        # Pre-fill with saved URI
+        if self.mongo_service.uri:
+            self.mongo_uri_entry.insert(0, self.mongo_service.uri)
+
+        # Toggle visibility
+        self._uri_visible = False
+        self.toggle_uri_btn = ctk.CTkButton(
+            bar, text="Afficher", width=60, height=28,
+            fg_color="transparent", hover_color=("gray80", "gray30"),
+            font=ctk.CTkFont(size=11),
+            command=self._toggle_uri_visibility,
+        )
+        self.toggle_uri_btn.grid(row=0, column=3, padx=2, pady=8)
+
+        # Connect button
+        self.mongo_connect_btn = ctk.CTkButton(
+            bar, text="Connecter", width=90, height=28,
+            command=self._connect_mongo,
+        )
+        self.mongo_connect_btn.grid(row=0, column=4, padx=5, pady=8)
+
+        # Status indicator
+        self.mongo_status_label = ctk.CTkLabel(
+            bar, text="Deconnecte", text_color="gray",
+            font=ctk.CTkFont(size=11),
+        )
+        self.mongo_status_label.grid(row=0, column=5, padx=(5, 15), pady=8)
+    
+    def _toggle_uri_visibility(self):
+        if self._uri_visible:
+            self.mongo_uri_entry.configure(show="\u2022")
+            self.toggle_uri_btn.configure(text="Afficher")
+            self._uri_visible = False
+        else:
+            self.mongo_uri_entry.configure(show="")
+            self.toggle_uri_btn.configure(text="Masquer")
+            self._uri_visible = True
+    
+    def _connect_mongo(self):
+        """Connect or disconnect from MongoDB."""
+        if self.mongo_service.is_connected:
+            self.mongo_service.disconnect()
+            self.mongo_connect_btn.configure(text="Connecter")
+            self.mongo_status_label.configure(text="Deconnecte", text_color="gray")
+            return
+        
+        uri = self.mongo_uri_entry.get().strip()
+        if not uri:
+            messagebox.showwarning("Attention", "Veuillez saisir l'URI MongoDB")
+            return
+        
+        self.mongo_status_label.configure(text="Connexion...", text_color="orange")
+        self.update_idletasks()
+        
+        try:
+            self.mongo_service.connect(uri=uri)
+            nb_users = len(self.mongo_service.get_all_users())
+            self.mongo_connect_btn.configure(text="Deconnecter", fg_color="#c0392b", hover_color="#a93226")
+            self.mongo_status_label.configure(
+                text=f"Connecte ({nb_users} users)", text_color="#2fa572"
+            )
+        except Exception as e:
+            self.mongo_status_label.configure(text="Erreur", text_color="#c0392b")
+            messagebox.showerror("Erreur MongoDB", f"Connexion echouee:\n{e}")
+    
+    def _auto_connect_mongo(self):
+        """Try to auto-connect using saved URI."""
+        try:
+            self.mongo_service.connect()
+            nb_users = len(self.mongo_service.get_all_users())
+            self.mongo_connect_btn.configure(text="Deconnecter", fg_color="#c0392b", hover_color="#a93226")
+            self.mongo_status_label.configure(
+                text=f"Connecte ({nb_users} users)", text_color="#2fa572"
+            )
+        except Exception:
+            self.mongo_status_label.configure(text="Auto-connect echoue", text_color="#f0ad4e")
     
     def _on_session_loaded(self):
         """Called when a session is loaded or created"""
@@ -781,8 +1109,8 @@ class TCPDataProcessorSession(ctk.CTk):
             s = self.session_manager.current_session
             self.session_info.configure(text=f"Session: {s.name}")
             
-            # Switch to Profils tab automatically
-            self.tabview.set("Profils")
+            # Switch to Profils page automatically
+            self._show_page("Profils")
         else:
             self.session_info.configure(text="Aucune session active")
         
@@ -799,6 +1127,172 @@ class TCPDataProcessorSession(ctk.CTk):
         else:
             ctk.set_appearance_mode("dark")
             self.theme_btn.configure(text="Light Mode")
+    
+    # ------------------------------------------------------------------ #
+    #  Protocol management dialog                                         #
+    # ------------------------------------------------------------------ #
+    def _open_protocol_manager(self):
+        """Open the protocol management dialog."""
+        dialog = ProtocolManagerDialog(self, self.protocol_store)
+        self.wait_window(dialog)
+        # After dialog closes, refresh the dropdown in the form
+        self.profile_tab.form.refresh_protocol_list()
+
+
+class ProtocolManagerDialog(ctk.CTkToplevel):
+    """Dialog to manage saved test protocols (add / edit / delete)."""
+
+    def __init__(self, parent, protocol_store: ProtocolStore):
+        super().__init__(parent)
+        self.protocol_store = protocol_store
+        self.title("Gestion des Protocoles")
+        self.geometry("650x500")
+        self.minsize(500, 400)
+        self.transient(parent)
+        self.grab_set()
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+
+        self._create_ui()
+        self._refresh_list()
+
+    def _create_ui(self):
+        # ---- Header ----
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.grid(row=0, column=0, sticky="ew", padx=15, pady=(15, 5))
+        header.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(header, text="Protocoles de Test",
+                     font=ctk.CTkFont(size=16, weight="bold")).grid(row=0, column=0, sticky="w")
+
+        btn_frame = ctk.CTkFrame(header, fg_color="transparent")
+        btn_frame.grid(row=0, column=1, sticky="e")
+        ctk.CTkButton(btn_frame, text="+ Ajouter", width=90, command=self._add_protocol).grid(row=0, column=0, padx=5)
+
+        # ---- Main area (split: list left, detail right) ----
+        main = ctk.CTkFrame(self, fg_color="transparent")
+        main.grid(row=1, column=0, sticky="nsew", padx=15, pady=5)
+        main.grid_columnconfigure(0, weight=1)
+        main.grid_columnconfigure(1, weight=2)
+        main.grid_rowconfigure(0, weight=1)
+
+        # ---- Left: protocol list ----
+        left = ctk.CTkFrame(main)
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        left.grid_rowconfigure(0, weight=1)
+        left.grid_columnconfigure(0, weight=1)
+
+        self.proto_listbox = ctk.CTkScrollableFrame(left)
+        self.proto_listbox.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        self.proto_listbox.grid_columnconfigure(0, weight=1)
+
+        # ---- Right: detail / editor ----
+        right = ctk.CTkFrame(main)
+        right.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        right.grid_columnconfigure(0, weight=1)
+        right.grid_rowconfigure(2, weight=1)
+
+        ctk.CTkLabel(right, text="Nom du protocole", anchor="w").grid(
+            row=0, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.name_entry = ctk.CTkEntry(right, placeholder_text="ex: Paliers 1 km/h Course")
+        self.name_entry.grid(row=1, column=0, padx=10, pady=2, sticky="ew")
+
+        ctk.CTkLabel(right, text="Description", anchor="w").grid(
+            row=2, column=0, padx=10, pady=(10, 2), sticky="nw")
+        self.desc_text = ctk.CTkTextbox(right, height=200)
+        self.desc_text.grid(row=3, column=0, padx=10, pady=2, sticky="nsew")
+        right.grid_rowconfigure(3, weight=1)
+
+        action_bar = ctk.CTkFrame(right, fg_color="transparent")
+        action_bar.grid(row=4, column=0, padx=10, pady=10, sticky="ew")
+        action_bar.grid_columnconfigure(0, weight=1)
+
+        self.save_btn = ctk.CTkButton(action_bar, text="Sauvegarder", command=self._save_current, state="disabled")
+        self.save_btn.grid(row=0, column=0, padx=5, sticky="e")
+
+        self.delete_btn = ctk.CTkButton(action_bar, text="Supprimer", fg_color="#c0392b",
+                                        hover_color="#a93226", command=self._delete_current, state="disabled")
+        self.delete_btn.grid(row=0, column=1, padx=5)
+
+        self._selected_name: Optional[str] = None
+
+    # ------------------------------------------------------------------ #
+    #  List management                                                    #
+    # ------------------------------------------------------------------ #
+    def _refresh_list(self):
+        """Rebuild the protocol list buttons."""
+        for w in self.proto_listbox.winfo_children():
+            w.destroy()
+
+        for name in self.protocol_store.list_names():
+            btn = ctk.CTkButton(
+                self.proto_listbox, text=name, anchor="w",
+                fg_color="transparent", hover_color=("gray80", "gray30"),
+                text_color=("gray10", "gray90"),
+                command=lambda n=name: self._select_protocol(n)
+            )
+            btn.grid(sticky="ew", pady=1)
+
+    def _select_protocol(self, name: str):
+        """Load a protocol into the editor."""
+        self._selected_name = name
+        self.name_entry.delete(0, "end")
+        self.name_entry.insert(0, name)
+        self.desc_text.delete("1.0", "end")
+        self.desc_text.insert("1.0", self.protocol_store.get_description(name))
+        self.save_btn.configure(state="normal")
+        self.delete_btn.configure(state="normal")
+
+    def _add_protocol(self):
+        """Clear editor for a new protocol."""
+        self._selected_name = None
+        self.name_entry.delete(0, "end")
+        self.desc_text.delete("1.0", "end")
+        self.name_entry.focus()
+        self.save_btn.configure(state="normal")
+        self.delete_btn.configure(state="disabled")
+
+    def _save_current(self):
+        """Save (create or update) the current protocol."""
+        name = self.name_entry.get().strip()
+        description = self.desc_text.get("1.0", "end-1c").strip()
+
+        if not name:
+            messagebox.showwarning("Attention", "Le nom du protocole est requis", parent=self)
+            return
+
+        if self._selected_name and self._selected_name != name:
+            # Rename
+            if not self.protocol_store.rename(self._selected_name, name):
+                messagebox.showwarning("Attention", f"Le nom « {name} » existe déjà", parent=self)
+                return
+            self.protocol_store.update(name, description)
+        elif self._selected_name:
+            # Update existing
+            self.protocol_store.update(name, description)
+        else:
+            # New protocol
+            if not self.protocol_store.add(name, description):
+                messagebox.showwarning("Attention", f"Le nom « {name} » existe déjà", parent=self)
+                return
+
+        self._selected_name = name
+        self._refresh_list()
+        messagebox.showinfo("Sauvegardé", f"Protocole « {name} » enregistré", parent=self)
+
+    def _delete_current(self):
+        if not self._selected_name:
+            return
+        if not messagebox.askyesno("Confirmer", f"Supprimer le protocole « {self._selected_name} » ?", parent=self):
+            return
+        self.protocol_store.delete(self._selected_name)
+        self._selected_name = None
+        self.name_entry.delete(0, "end")
+        self.desc_text.delete("1.0", "end")
+        self.save_btn.configure(state="disabled")
+        self.delete_btn.configure(state="disabled")
+        self._refresh_list()
 
 
 def main():
